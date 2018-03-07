@@ -18,51 +18,32 @@
     public override void Execute(CommandContext context)
     {
       Assert.ArgumentNotNull(context, "context");
-      if (ContinuationManager.Current != null)
-      {
-        ContinuationManager.Current.Start(this, "Run");
-      }
-      else
-      {
-        Context.ClientPage.Start(this, "Run");
-      }
+      Context.ClientPage.Start(this, "Run");
     }
 
     protected void Run(ClientPipelineArgs args)
     {
       Assert.ArgumentNotNull(args, "args");
-      if (args.IsPostBack)
+      User user = Context.User;
+      Assert.IsNotNull(user, typeof(User));
+      UserProfile profile = user.Profile;
+      List<string> customPropertyNames = profile.GetCustomPropertyNames();
+      string str = "/" + user.Name + "/";
+      foreach (string str2 in customPropertyNames)
       {
-        if (args.Result == "yes")
+        if (str2.StartsWith(str, StringComparison.InvariantCultureIgnoreCase))
         {
-          User user = Context.User;
-          Assert.IsNotNull(user, typeof(User));
-          UserProfile profile = user.Profile;
-          List<string> customPropertyNames = profile.GetCustomPropertyNames();
-          string str = "/" + user.Name + "/";
-          foreach (string str2 in customPropertyNames)
-          {
-            if (str2.StartsWith(str, StringComparison.InvariantCultureIgnoreCase))
-            {
-              profile.RemoveCustomProperty(str2);
-            }
-          }
-          profile.Save();
-          RegistryCache registryCache = CacheManager.GetRegistryCache(Context.Site);
-          if (registryCache != null)
-          {
-            registryCache.Clear();
-          }
-          string[] parameters = new string[] { user.Name };
-          Log.Audit(this, "Reset settings: {0}", parameters);
-          SheerResponse.Alert(Translate.Text("Your settings have been reset.\n\nSome changes will first take effect, when the browser is refreshed."), new string[0]);
+          profile.RemoveCustomProperty(str2);
         }
       }
-      else
+      profile.Save();
+      RegistryCache registryCache = CacheManager.GetRegistryCache(Context.Site);
+      if (registryCache != null)
       {
-        SheerResponse.Confirm(Translate.Text("Are you sure you want to reset your settings to default values?"));
-        args.WaitForPostBack();
+        registryCache.Clear();
       }
+      string[] parameters = new string[] { user.Name };
+      Log.Audit(this, "Reset settings: {0}", parameters);      
     }
   }
 }
